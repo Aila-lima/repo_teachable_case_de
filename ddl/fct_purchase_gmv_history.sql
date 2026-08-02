@@ -1,21 +1,3 @@
--- ============================================================================
--- ENTREGÁVEL 1 - Tabela analítica final
---
--- Grão          : uma linha por (purchase_id, version_number)
---                 = uma compra, como a entendíamos num ponto do tempo de sistema
--- Particionamento: transaction_date (dia de ingestão) - a mesma coluna que as
---                 consultas "as of" filtram, então viajar no tempo é um
---                 partition pruning
--- Imutabilidade : append-only. Sem UPDATE, sem DELETE, sem valid_to, sem is_current
--- Vigência      : derivada na leitura (ver sql/vw_purchase_gmv_current.sql)
---
--- A tabela é bitemporal:
---   tempo de negócio -> order_date, release_date, gmv_date  ("quando aconteceu")
---   tempo de sistema -> transaction_date, version_valid_from_ts ("quando soubemos")
--- Todo requisito sobre eventos atrasados, retificações e apuração "as of" é
--- consequência de manter esses dois eixos separados.
--- ============================================================================
-
 CREATE TABLE fct_purchase_gmv_history (
 
     -- ---- Grão ------------------------------------------------------------
@@ -69,15 +51,3 @@ TBLPROPERTIES (
     'delta.autoOptimize.optimizeWrite'   = 'true',
     'delta.deletedFileRetentionDuration' = 'interval 3650 days'
 );
-
--- ---------------------------------------------------------------------------
--- Por que não existe coluna valid_to / is_current
---
--- Fechar uma versão significa escrever na linha que foi inserida quando aquela
--- versão nasceu - uma linha que vive numa partição já encerrada. Toda
--- implementação de SCD2 que materializa valid_to *precisa*, portanto, reescrever
--- a história a cada evento atrasado, que é exatamente o que o requisito 9
--- proíbe. Derivar a vigência com ROW_NUMBER() na leitura custa uma window
--- function e compra imutabilidade, consultas "as of" gratuitas e backfills
--- idempotentes.
--- ---------------------------------------------------------------------------
