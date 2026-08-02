@@ -1,23 +1,27 @@
-"""Spark session + thin storage abstraction.
-
-The Gold table is append-only, so plain partitioned Parquet is already correct.
-Delta/Iceberg is the production target for atomic commits, schema evolution,
-MERGE on Silver and OPTIMIZE/Z-ORDER - swapping GMV_TABLE_FORMAT is enough.
-"""
 from __future__ import annotations
 
 from pyspark.sql import DataFrame, SparkSession
 
 from . import config
 
+import os
+import time
+
+def _force_utc() -> None:
+    os.environ["TZ"] = "UTC"
+    if hasattr(time, "tzset"):
+        time.tzset()
 
 def get_spark(app_name: str = "gmv-bitemporal") -> SparkSession:
+    _force_utc()
     builder = (
         SparkSession.builder.appName(app_name)
         .master("local[*]")
         .config("spark.sql.shuffle.partitions", "1")
         .config("spark.sql.sources.partitionOverwriteMode", "dynamic")
         .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.driver.extraJavaOptions", "-Duser.timezone=UTC")
+        .config("spark.executor.extraJavaOptions", "-Duser.timezone=UTC")
         .config("spark.ui.enabled", "false")
     )
     if config.TABLE_FORMAT == "delta":
