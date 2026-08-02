@@ -1,6 +1,3 @@
--- Estado vigente de cada compra.
--- Sem valid_to, sem flag is_current: a vigência é derivada na leitura, que é
--- precisamente o que mantém a tabela subjacente append-only.
 CREATE OR REPLACE TEMP VIEW vw_purchase_gmv_current AS
 SELECT * EXCEPT (version_rank)
 FROM (
