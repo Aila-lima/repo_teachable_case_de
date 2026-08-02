@@ -1,6 +1,3 @@
--- ENTREGÁVEL 4 - GMV diário por subsidiary.
--- Uma tabela, sem joins, sem filtros: gmv_amount já é zero para compras que não
--- foram liberadas ou que foram canceladas/reembolsadas.
 SELECT
     gmv_date            AS date,
     subsidiary,
