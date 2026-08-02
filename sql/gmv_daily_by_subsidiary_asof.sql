@@ -1,6 +1,3 @@
--- A mesma métrica, como era conhecida num dia específico ({{as_of}}).
--- Rodar isto com duas datas diferentes é a primitiva de conciliação: o delta
--- entre elas é integralmente explicado por change_reason.
 SELECT
     gmv_date            AS date,
     subsidiary,
