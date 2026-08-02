@@ -1,9 +1,4 @@
 """Invariant tests - the claims this model makes, asserted in code.
-
-    python -m gmv.checks
-
-These are the properties a reviewer should be able to verify without reading
-the implementation. Run after `python -m gmv.pipeline --reset --seed --replay-all`.
 """
 from __future__ import annotations
 
