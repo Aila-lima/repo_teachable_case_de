@@ -1,10 +1,4 @@
 """Assembly: turn three independent CDC streams into one candidate fact row.
-
-The `purchase` event is the spine: no purchase event, no fact row. Line items
-and dimensional attributes are LEFT joined, so a purchase becomes visible as
-soon as it is known, flagged as incomplete, and is enriched by later versions.
-That is deliberate - the table must record what we *knew at the time*, not a
-retroactively perfect picture.
 """
 from __future__ import annotations
 
@@ -20,11 +14,6 @@ MONEY = "decimal(18,2)"
 
 
 def affected_purchase_ids(spark: SparkSession, batch_date: date) -> DataFrame:
-    """Purchases touched by any event ingested on `batch_date`.
-
-    This is what keeps the batch incremental: we never rescan history, only the
-    D-1 partition of each Bronze table.
-    """
     parts = []
     for table in (config.BRONZE_PURCHASE, config.BRONZE_EXTRA_INFO):
         parts.append(
@@ -39,9 +28,6 @@ def affected_purchase_ids(spark: SparkSession, batch_date: date) -> DataFrame:
     if config.ITEM_JOIN_KEY == "purchase_id":
         parts.append(items.select("purchase_id"))
     else:
-        # Item events do not carry purchase_id: resolve it through Silver.
-        # If the purchase is not known yet, the id is picked up later, when the
-        # purchase event itself arrives.
         purchases = storage.read_or_none(spark, config.SILVER_PURCHASE)
         if purchases is not None:
             parts.append(
@@ -92,7 +78,6 @@ def build_candidates(spark: SparkSession, batch_date: date) -> DataFrame:
 
     df = (
         df
-        # Business time: GMV is recognised when the payment is captured.
         .withColumn("gmv_date", F.col("release_date"))
         .withColumn("is_gmv_eligible", released & ~cancelled)
         .withColumn(
@@ -101,8 +86,6 @@ def build_candidates(spark: SparkSession, batch_date: date) -> DataFrame:
             .when(~released, F.lit("NOT_RELEASED"))
             .otherwise(F.lit(None).cast("string")),
         )
-        # Pre-applied metric: SUM(gmv_amount) is correct with no WHERE clause,
-        # which is what requirement 6 (non-expert SQL users) really asks for.
         .withColumn(
             "gmv_amount",
             F.when(F.col("is_gmv_eligible"), F.coalesce(F.col("purchase_gross_value"), F.lit(0)))
@@ -124,8 +107,6 @@ def build_candidates(spark: SparkSession, batch_date: date) -> DataFrame:
         )
     )
 
-    # Fingerprint of the business payload only: a re-sent identical event
-    # produces the same hash and therefore no new version.
     payload = F.concat_ws(
         "|", *[F.coalesce(F.col(c).cast("string"), F.lit("<null>")) for c in config.PAYLOAD_FIELDS]
     )
