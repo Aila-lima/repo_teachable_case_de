@@ -1,13 +1,8 @@
 """Seeds the Bronze layer with the CDC events from the case statement.
-
-Rows marked [CASE] come verbatim from the PDF sample data.
-Rows marked [EXTRA] were added to exercise two scenarios the sample does not
-cover but the Core Question explicitly asks about: a purchase whose payment is
-captured late (entering GMV after the fact) and a refund (leaving GMV).
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from pyspark.sql import SparkSession
 from pyspark.sql.types import (
@@ -85,7 +80,7 @@ _EXTRA_SCHEMA = StructType([
 
 
 def _ts(s: str) -> datetime:
-    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
 
 def _d(s: str | None) -> date | None:
@@ -97,8 +92,6 @@ def seed(spark: SparkSession) -> None:
     for ts, pid, buyer, item_id, odate, rdate, prod, status in PURCHASE_EVENTS:
         t = _ts(ts)
         od = _d(odate)
-        # purchase_total_value is the header amount; the authoritative monetary
-        # value lives in product_item (see DECISIONS.md, assumption A3).
         purchases.append((pid, buyer, item_id, od, _d(rdate), prod,
                           _yyyymm(od), _yyyymm(od), None, status, t, t.date()))
 
