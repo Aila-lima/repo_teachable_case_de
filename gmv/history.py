@@ -1,18 +1,3 @@
-"""Gold: append-only bitemporal fact table.
-
-Two invariants define this layer:
-
-1. A row, once written, is never updated or deleted. There is no `valid_to`
-   and no `is_current` flag, because maintaining either one requires rewriting
-   a closed partition - exactly what requirement 9 forbids.
-2. A batch is a pure function of (Bronze <= D-1, Gold < D-1). It never reads
-   its own output partition, so re-running it is a no-op rather than a
-   duplication. Backfills are therefore deterministic and replayable.
-
-"Which version is current" is a *read-time* decision (see sql/vw_*.sql), which
-is what makes as-of queries free: the same window function with one extra
-predicate on the partition key.
-"""
 from __future__ import annotations
 
 from datetime import date
@@ -95,8 +80,7 @@ def build_new_versions(
             .withColumn("version_number", F.lit(0))
             .limit(0)
         )
-    # Prefix every column from the previous version: no ambiguous references,
-    # and the diff below reads like plain English.
+       
     previous = previous.select(*[F.col(c).alias(f"prev_{c}") for c in _PREV_COLUMNS])
 
     joined = candidates.join(
