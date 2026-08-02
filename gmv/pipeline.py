@@ -1,12 +1,3 @@
-"""Orchestration entry point.
-
-    python -m gmv.pipeline --reset --seed --replay-all
-    python -m gmv.pipeline --batch-date 2023-07-15
-
-A D-1 batch is a pure function of (Bronze <= D-1, Gold < D-1). Replaying the
-days in order therefore rebuilds Gold bit-for-bit, which is the operational
-guarantee behind "reprocessing does not rewrite historical truth".
-"""
 from __future__ import annotations
 
 import argparse
@@ -27,12 +18,6 @@ def run_batch(spark, batch_date: date) -> int:
 
 
 def replay(spark, days) -> int:
-    """Replay a list of ingestion days in chronological order.
-
-    Reprocessing must always move forward: correcting day D and leaving D+1
-    untouched would leave version numbers referring to a state that no longer
-    exists. `--replay-from` exists precisely so nobody has to remember that.
-    """
     return sum(run_batch(spark, d) for d in days)
 
 
