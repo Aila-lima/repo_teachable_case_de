@@ -1,12 +1,3 @@
-"""Data quality gate - roda depois de cada batch, em producao.
-
-Diferente de `tests/`, que roda no CI sobre dados fixos, isto roda sobre os
-dados reais a cada execucao. Checks BLOQUEANTES abortam o batch antes que a
-particao seja publicada; WARNINGS viram alerta no CloudWatch mas nao param a
-esteira, porque nem toda anomalia e um defeito.
-
-    python -m gmv.quality --batch-date 2023-07-15
-"""
 from __future__ import annotations
 
 import argparse
@@ -81,8 +72,6 @@ def run(gold: DataFrame, batch_date: date) -> Result:
           reconcilable.count() == 0, f"{reconcilable.count()} sem valor")
 
     # --- SLA de completude (warning, premissa A6) --------------------------
-    # Precisa olhar a versao VIGENTE, nao o historico: toda compra nasce
-    # UNKNOWN e isso e esperado. O problema e continuar UNKNOWN hoje.
     w = Window.partitionBy("purchase_id").orderBy(F.col("version_number").desc())
     latest = (gold.withColumn("_rn", F.row_number().over(w))
               .where(F.col("_rn") == 1).drop("_rn"))
@@ -106,8 +95,6 @@ def run(gold: DataFrame, batch_date: date) -> Result:
           not spike, f"{n} versoes (media {baseline:.1f})")
 
     # --- taxa de retificacao (warning) -------------------------------------
-    # Uma taxa so tem significado com amostra: num batch de 1 versao, qualquer
-    # retificacao vira 100% e o alerta viraria ruido que ninguem mais le.
     restatements = batch.where(F.col("version_type") == "RESTATEMENT").count()
     if n < MIN_BATCH_FOR_RATES:
         r.add(WARNING, "taxa de retificacao", True,
