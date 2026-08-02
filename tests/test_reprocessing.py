@@ -36,17 +36,7 @@ def test_replay_from_a_past_day_reproduces_everything(spark, scratch_warehouse):
 
 
 def test_reprocessing_the_past_does_not_leak_future_state(spark, scratch_warehouse):
-    """REGRESSAO — o bug encontrado no desenvolvimento.
-
-    A Silver guarda o estado mais recente por chave. Reprocessar 05/02 depois de
-    julho ja ter sido incorporado fazia a montagem usar o estado de julho, e a
-    versao 3 da compra 55 era reescrita com release_date de marco e valor 55,00
-    — dados que nao existiam em 5 de fevereiro.
-
-    A Gold era append-only e ainda assim produzia historia falsificada: o
-    vazamento estava na camada de baixo. A correcao foi dar a Silver um rebuild
-    point-in-time quando batch_date <= watermark.
-    """
+    
     pipeline.run_batch(spark, date(2023, 2, 5))
     spark.catalog.clearCache()
 
@@ -72,12 +62,7 @@ def test_silver_switches_to_point_in_time_rebuild(spark, scratch_warehouse):
 
 @pytest.mark.slow
 def test_full_replay_from_scratch_is_deterministic(spark, scratch_warehouse, tmp_path):
-    """Reconstruir do zero tem que dar exatamente a mesma Gold.
-
-    Marcado como `slow`: reprocessa os 12 dias de ingestao. Fora do ciclo rapido
-    porque `make check` ja executa a mesma verificacao num subprocesso isolado,
-    que e onde ela pertence - dentro de uma sessao Spark longa ela degrada.
-    """
+    
     before = _fingerprint(storage.read(spark, config.GOLD_HISTORY))
 
     config.WAREHOUSE = tmp_path / "rebuilt"
