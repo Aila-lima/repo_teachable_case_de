@@ -1,9 +1,3 @@
-"""Shared fixtures.
-
-The pipeline is built ONCE per session and reused, because a Spark session plus
-a full replay is expensive. Tests that need to mutate the warehouse get an
-isolated copy through the `scratch_warehouse` fixture.
-"""
 from __future__ import annotations
 
 import shutil
