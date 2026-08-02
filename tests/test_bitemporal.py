@@ -1,8 +1,3 @@
-"""O nucleo do modelo: separar tempo de negocio de tempo de sistema.
-
-Estes sao os testes que provam os requisitos 3, 4 e 9. Se algum deles quebrar,
-o modelo perdeu a propriedade que justifica sua existencia.
-"""
 import hashlib
 from datetime import date
 from pathlib import Path
@@ -89,3 +84,10 @@ def test_closed_partition_is_never_rewritten(spark, scratch_warehouse):
     days = [d for d in seed.event_days(spark) if d >= date(2023, 2, 5)]
     pipeline.replay(spark, days)
     assert _partition_fingerprint(scratch_warehouse, "2023-01-20") == before
+
+def test_ingestion_timestamps_are_timezone_stable(gold):
+    row = gold.where(
+        (F.col("purchase_id") == 55) & (F.col("version_number") == 1)
+    ).first()
+    assert str(row.version_valid_from_ts) == "2023-01-20 22:02:00"
+    assert str(row.transaction_date) == "2023-01-20"
