@@ -1,23 +1,3 @@
-"""Silver: per-key state compaction.
-
-For each entity we keep exactly one row per business key: the latest event
-observed so far. This is a *derived cache* - it can always be rebuilt from
-Bronze - which is why it is allowed to be mutable while Gold is not.
-
-Two execution paths, and the distinction matters:
-
-* INCREMENTAL (the daily D-1 run). Read only the D-1 Bronze partition and fold
-  it into the existing state. O(new events).
-
-* POINT-IN-TIME REBUILD (any reprocessing of a day at or before the watermark).
-  Recompute the state from Bronze with `transaction_date <= batch_date`.
-  Without this, replaying an old day would assemble it using *today's* state
-  and silently rewrite history with information that did not exist yet - the
-  exact failure mode requirement 9 is guarding against.
-
-Ordering is last-write-wins by `transaction_datetime`, so an event carrying an
-older ingestion timestamp cannot overwrite fresher state (assumption A5).
-"""
 from __future__ import annotations
 
 from datetime import date
