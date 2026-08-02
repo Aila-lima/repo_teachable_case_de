@@ -1,0 +1,9 @@
+# Execucao
+pyspark==4.0.1
+
+# Testes
+pytest>=8.0
+
+# Opcional - camada de armazenamento de producao.
+# Baixa JARs do Maven na primeira execucao:
+# delta-spark==4.0.0
